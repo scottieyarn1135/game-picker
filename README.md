@@ -14,3 +14,18 @@ I have created this to keep track of games I am playing or I am currently playin
 
 ## Set up
 
+Clone the repo
+
+```
+git clone https://github.com/scottieyarn1135/game-picker.git
+```
+Going into the repo and installing required packages
+```
+cd game-picker
+
+pip install -r requirements.txt
+```
+Starting the application
+```
+python3 main.py
+```
