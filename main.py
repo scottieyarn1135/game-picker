@@ -1,5 +1,13 @@
 # Packages
 import sqlite3
+from dotenv import load_dotenv
+from rich import print as rprint
+import json
+import os
+import requests
+import random
+
+load_dotenv()
 
 while True:
     #connect to DB -> If DB does not exist this will create the db
@@ -17,21 +25,20 @@ while True:
         )
     #Saves created table
     conn.commit()
-    print(f'This has been created to track the games I have been playing along with picking a random game to play')
-    User_Input = input("🎮 Type add, view or remove or edit or random game: ")
+    User_Input = input("🎮 Type add, view or remove or edit or random game or if you have a steam account you can use Steam: ")
     User_Input = User_Input.strip()
     match User_Input:
         case 'add':
             game = str(input("🎮 Enter game name: "))
             c.execute(' INSERT INTO Games (GameName,GameRating,GameDescription) VALUES (?,"To be added","To be added")',(game,))
             conn.commit()
-            print(f'🎮 Added {game} to the list 🎮')
+            rprint(f'🎮 Added {game} to the list 🎮')
         case 'view':
             games = c.execute('SELECT Gamename,GameDescription, GameRating FROM Games')
             for games in c:
-                print(f'name:{games[0]}\n'
-                      f'Description:{games[1]}\n'
-                      f'Rating:{games[2]}\n')
+                rprint(f'name: {games[0]}\n'
+                      f'Description: {games[1]}\n'
+                      f'Rating: {games[2]}\n')
         case 'remove':
             RemovedGamesName = str(input("🎮 Enter game name: "))
             c.execute('DELETE FROM Games WHERE GameName = ?',(RemovedGamesName,))
@@ -57,6 +64,39 @@ while True:
         case 'random game':
             c.execute('SELECT Gamename,GameDescription, GameRating FROM Games ORDER BY RANDOM() LIMIT 1')
             for games in c:
-                print(f'name:{games[0]}\n'
-                      f'Description:{games[1]}\n'
-                      f'Rating:{games[2]}\n')
+                rprint(f'name: {games[0]}\n'
+                      f'Description: {games[1]}\n'
+                      f'Rating: {games[2]}\n')
+        case 'Steam':
+            steam_key = os.getenv("STEAMAPIKEY")
+            your_steam_id = os.getenv("YOUR_STEAM_ID")
+            Steam_api_owned_games = requests.get(f'https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={steam_key}&steamid={your_steam_id}&include_appinfo=True&format=json')
+            Steam_api_json = Steam_api_owned_games.json()
+            game_name = []
+            games_appid = []
+            for game_appid in Steam_api_json['response']['games']:
+                games_appids = game_appid['appid']
+                games_appid.append(games_appids)
+            random_game = random.choice(games_appid)
+            Steam_store_api_url = f'https://store.steampowered.com/api/appdetails?appids={random_game}'
+            Steam_store_api_response = requests.get(Steam_store_api_url)
+            Steam_store_api_json = Steam_store_api_response.json()
+            Steam_store_picture = Steam_store_api_json[str(random_game)]['data']['header_image']
+            Steam_store_short_description = Steam_store_api_json[str(random_game)]['data']['short_description']
+            params = {
+                "key": steam_key,
+                "steamid": your_steam_id,
+                "format": "json",
+                "include_appinfo": "true",
+                "appids_filter[0]": random_game,
+            }
+            url = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/"
+            Steam_api_owned_games_appid = requests.get(url, params=params)
+            steam_owned_games_appid_json = Steam_api_owned_games_appid.json()
+            for game in steam_owned_games_appid_json['response']['games']:
+                game_names = game['name']
+                games_playtime = game['playtime_forever'] / 60
+            rprint(f"link to an image of the game: {Steam_store_picture}")
+            rprint(f'Game Name: {game_names}')
+            rprint(f'description of the game: {Steam_store_short_description})')
+            rprint(f'Time played:{games_playtime:.2f} hours')
